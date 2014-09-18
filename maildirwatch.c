@@ -290,7 +290,7 @@ handle_events(int argc, char* argv[])
 
         subject = get_email_subject(path);
         if (message_is_read(event->name) == 0)
-          printf("New message: %s : %s\n", it->name, subject);
+          printf("New message: %s : %s\n", path, subject);
 
         free(path);
         free(subject);
