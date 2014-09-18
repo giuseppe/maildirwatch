@@ -32,6 +32,7 @@ as that of the covered work.  */
 #include <sys/inotify.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <dirent.h>
 #include <sys/types.h>
@@ -61,7 +62,7 @@ message_is_read(const char *name)
 }
 
 static void
-dump_stats(int details)
+dump_stats(bool details)
 {
   struct Maildir *m;
   struct dirent *ent;
