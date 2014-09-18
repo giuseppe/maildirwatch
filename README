@@ -1,0 +1,7 @@
+** Maildirwatch **
+
+A simple program that watches a collection of Maildirs[1] for incoming
+messages.  It works only on GNU/Linux as it uses inotify to monitor
+changes on the file system.
+
+1) http://en.wikipedia.org/wiki/Maildir
