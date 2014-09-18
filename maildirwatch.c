@@ -170,7 +170,7 @@ check_dir(const char *name)
   for (;;) {
     ent = readdir(dir);
     if (ent == NULL)
-      goto cleanup;
+      break;
 
     if (ent->d_type != DT_DIR || ent->d_name[0] == '.')
       continue;
@@ -182,13 +182,14 @@ check_dir(const char *name)
 
     asprintf(&cur, "%s/%s", name, ent->d_name);
     if (cur == NULL)
-      goto cleanup;
+      error(EXIT_FAILURE, errno, "Could not allocate path for %s", ent->d_name);
 
     if (access(cur, F_OK) < 0)
       goto cleanup;
 
     printf("Adding: %s\n", ent->d_name);
-    add_dir(ent->d_name, cur);
+    if (add_dir(ent->d_name, cur) < 0)
+      error(EXIT_FAILURE, errno, "Could not add directory %s", ent->d_name);
 
     free(cur);
     cur = NULL;
@@ -285,7 +286,7 @@ handle_events(int argc, char* argv[])
 
         asprintf(&path, "%s/%s/%s", it->name, subdir, event->name);
         if (path == NULL)
-          break;
+          error(EXIT_FAILURE, errno, "Could not allocate path for %s", subdir);
 
         subject = get_email_subject(path);
         if (message_is_read(event->name) == 0)
@@ -316,11 +317,13 @@ main(int argc, char* argv[])
 
   inotify_fd = inotify_init1(IN_NONBLOCK);
   if (inotify_fd == -1) {
-    exit(EXIT_FAILURE);
+    error(EXIT_FAILURE, errno, "Could not init inotify");
   }
 
   for (i = 1; i < argc; i++) {
-    check_dir(argv[i]);
+    if (check_dir(argv[i]))
+      error(EXIT_FAILURE, errno, "Could not check directory %s", argv[i]);
+
   }
 
   nfds = 2;
@@ -336,7 +339,7 @@ main(int argc, char* argv[])
     if (poll_num == -1) {
       if (errno == EINTR)
         continue;
-      exit(EXIT_FAILURE);
+      error(EXIT_FAILURE, errno, "Could not poll");
     }
 
     if (poll_num > 0) {
