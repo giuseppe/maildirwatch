@@ -39,6 +39,8 @@ as that of the covered work.  */
 
 static int inotify_fd;
 
+static bool print_subject;
+
 struct Maildir
 {
   struct Maildir *next;
@@ -292,12 +294,17 @@ handle_events(int argc, char* argv[])
         if (path == NULL)
           error(EXIT_FAILURE, errno, "Could not allocate path for %s", subdir);
 
-        subject = get_email_subject(path);
-        if (message_is_read(event->name) == 0)
-          printf("New message: %s : %s\n", path, subject);
-
+        if (message_is_read(event->name) == 0) {
+          if (print_subject) {
+            subject = get_email_subject(path);
+            printf("New message: %s : %s\n", path, subject);
+            free(subject);
+          }
+          else {
+            printf("%s\n", path);
+          }
+        }
         free(path);
-        free(subject);
       }
     }
   }
@@ -355,10 +362,22 @@ main(int argc, char* argv[])
       if (fds[1].revents & POLLIN) {
         char buf[64];
         read(0, buf, sizeof(buf));
-        dump_stats(buf[0] == 'l');
+
+        switch (buf[0]) {
+        case 'l':
+          dump_stats(true);
+          break;
+
+        case 'i':
+          dump_stats(false);
+          break;
+
+        case 's':
+          print_subject = !print_subject;
+          break;
+        }
       }
     }
   }
-
   return 0;
 }
