@@ -281,6 +281,9 @@ handle_events(int argc, char* argv[])
         }
       }
 
+      if (subdir == NULL)
+          error(EXIT_FAILURE, errno, "Could not find descriptor for %s", subdir);
+
       if (event->mask & IN_MOVED_TO) {
         char *subject, *path;
 
