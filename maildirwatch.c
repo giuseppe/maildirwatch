@@ -326,8 +326,9 @@ main(int argc, char* argv[])
   for (i = 1; i < argc; i++) {
     if (check_dir(argv[i]))
       error(EXIT_FAILURE, errno, "Could not check directory %s", argv[i]);
-
   }
+
+  printf("READY\n");
 
   nfds = 2;
 
