@@ -5,3 +5,20 @@ messages.  It works only on GNU/Linux as it uses inotify to monitor
 changes on the file system.
 
 1) http://en.wikipedia.org/wiki/Maildir
+
+* Integration with Emacs
+
+New messages can be quickly notified in Emacs by adding these few
+lines to your .emacs file:
+
+;; begin of maildirwatch
+
+(load "/path/to/maildirwatch.el")
+
+;; Path to the maildir executable
+(setq maildirwatch-path "/path/to/maildirwatch")
+
+;; List of Maildirs to watch for incoming messages
+(maildirwatch-watch '("~/Maildir"))
+
+;; end of maildirwatch
