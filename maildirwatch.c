@@ -64,6 +64,16 @@ message_is_read(const char *name)
 }
 
 static void
+dump_mdirs()
+{
+  struct Maildir *m;
+
+  for (m = maildirs; m; m = m->next) {
+    printf("%s : %s\n", m->pretty_name, m->name);
+  }
+}
+
+static void
 dump_stats(bool details)
 {
   struct Maildir *m;
@@ -190,7 +200,6 @@ check_dir(const char *name)
     if (access(cur, F_OK) < 0)
       goto cleanup;
 
-    printf("Adding: %s\n", ent->d_name);
     if (add_dir(ent->d_name, cur) < 0)
       error(EXIT_FAILURE, errno, "Could not add directory %s", ent->d_name);
 
@@ -336,8 +345,6 @@ main(int argc, char* argv[])
       error(EXIT_FAILURE, errno, "Could not check directory %s", argv[i]);
   }
 
-  printf("READY\n");
-
   nfds = 2;
 
   fds[0].fd = inotify_fd;
@@ -375,6 +382,9 @@ main(int argc, char* argv[])
         case 's':
           print_subject = !print_subject;
           break;
+
+        case 'd':
+          dump_mdirs();
         }
       }
     }
