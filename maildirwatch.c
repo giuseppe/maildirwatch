@@ -1,5 +1,5 @@
 /* Maildirwatch -- watch a maildir for new messages
-   Copyright (C) 2014 Giuseppe Scrivano <gscrivano@gnu.org>
+   Copyright (C) 2014, 2015 Giuseppe Scrivano <gscrivano@gnu.org>
 
 Maildirwatch is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -101,7 +101,9 @@ dump_stats(bool details)
         if (ent == NULL)
           break;
 
-        if (ent->d_type != DT_REG || ent->d_name[0] == '.')
+        if (ent->d_type != DT_REG
+            || strcmp (ent->d_name, ".") == 0
+            || strcmp (ent->d_name, "..") == 0)
           continue;
 
   
@@ -185,7 +187,9 @@ check_dir(const char *name)
     if (ent == NULL)
       break;
 
-    if (ent->d_type != DT_DIR || ent->d_name[0] == '.')
+    if (ent->d_type != DT_DIR
+        || strcmp (ent->d_name, ".") == 0
+        || strcmp (ent->d_name, "..") == 0)
       continue;
 
     if (strcmp(ent->d_name, "cur") == 0 ||
