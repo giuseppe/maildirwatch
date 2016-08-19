@@ -33,6 +33,7 @@ along with Wget.  If not, see <http://www.gnu.org/licenses/>.
 static int inotify_fd;
 
 static bool print_subject;
+static bool opt_json;
 
 struct Maildir
 {
@@ -54,6 +55,43 @@ message_is_read (const char *name)
     return -1;
 
   return strchr (flags + 2, 'S') == NULL ? 0 : 1;
+}
+
+static void
+print_str_encoded (const char *str)
+{
+  for (; *str; str++)
+    {
+      switch (*str)
+        {
+        case '\'':
+        case '"':
+        case '\\':
+        case '/':
+        case '\b':
+        case '\f':
+        case '\t':
+        case '\n':
+        case '\r':
+          putchar ('\\');
+        default:
+          putchar (*str);
+        }
+    }
+}
+
+static void
+print_json (const char *folder, const char *path, const char *from, const char *subject)
+{
+  printf ("{\"folder\": \"");
+  print_str_encoded (folder);
+  printf ("\", \"path\": \"");
+  print_str_encoded (path);
+  printf ("\", \"from\": \"");
+  print_str_encoded (from);
+  printf ("\", \"subject\": \"");
+  print_str_encoded (subject);
+  printf ("\"}\n");
 }
 
 static void
@@ -285,7 +323,6 @@ handle_events (int argc, char *argv[])
   int i;
   ssize_t len;
   char *ptr;
-  struct Maildir *it;
   const char *subdir = NULL;
 
   buf = malloc (BUFFER_SIZE);
@@ -294,7 +331,6 @@ handle_events (int argc, char *argv[])
 
   for (;;)
     {
-
       len = read (inotify_fd, buf, BUFFER_SIZE);
       if (len == -1 && errno != EAGAIN)
 	{
@@ -307,6 +343,7 @@ handle_events (int argc, char *argv[])
       for (ptr = buf; ptr < buf + len;
 	   ptr += sizeof (struct inotify_event) + event->len)
 	{
+          struct Maildir *maildir = NULL;
 
 	  event = (const struct inotify_event *) ptr;
 
@@ -315,14 +352,14 @@ handle_events (int argc, char *argv[])
 	      continue;
 	    }
 
-	  for (it = maildirs; it; it = it->next)
+	  for (maildir = maildirs; maildir; maildir = maildir->next)
 	    {
-	      if (event->wd == it->fd_cur)
+	      if (event->wd == maildir->fd_cur)
 		{
 		  subdir = "cur";
 		  break;
 		}
-	      if (event->wd == it->fd_new)
+	      if (event->wd == maildir->fd_new)
 		{
 		  subdir = "new";
 		  break;
@@ -337,14 +374,20 @@ handle_events (int argc, char *argv[])
 	    {
 	      char *path;
 
-	      asprintf (&path, "%s/%s/%s", it->name, subdir, event->name);
+	      asprintf (&path, "%s/%s/%s", maildir->name, subdir, event->name);
 	      if (path == NULL)
 		error (EXIT_FAILURE, errno, "Could not allocate path for %s",
 		       subdir);
 
 	      if (message_is_read (event->name) == 0)
 		{
-		  if (print_subject)
+                  if (opt_json)
+                    {
+                      char *from = NULL, *subject = NULL;
+                      get_email_from_subject (path, &from, &subject);
+                      print_json (maildir->pretty_name, path, from, subject);
+                    }
+		  else if (print_subject)
 		    {
                       char *subject = NULL;
                       get_email_from_subject (path, NULL, &subject);
@@ -385,7 +428,13 @@ main (int argc, char *argv[])
       error (EXIT_FAILURE, errno, "Could not init inotify");
     }
 
-  for (i = 1; i < argc; i++)
+  for (i = 1; i < argc && argv[i][0] == '-'; i++)
+    {
+      if (strcmp (argv[i], "--json") == 0)
+        opt_json = 1;
+    }
+
+  for (; i < argc; i++)
     {
       if (check_dir (argv[i]))
 	error (EXIT_FAILURE, errno, "Could not check directory %s", argv[i]);
