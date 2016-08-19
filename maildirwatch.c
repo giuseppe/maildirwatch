@@ -217,17 +217,30 @@ cleanup:
   return ret;
 }
 
-static char *
-get_email_subject (const char *filename)
+static void
+get_email_from_subject (const char *filename, char **from , char **subject)
 {
   char *lineptr;
   size_t len;
-  char *ret = NULL;
-  FILE *f = fopen (filename, "r");
-  if (f == NULL)
-    return NULL;
+  FILE *f;
+  int left = 0;
 
-  for (;;)
+  if (from)
+    {
+      left++;
+      *from = NULL;
+    }
+  if (subject)
+    {
+      left++;
+      *subject = NULL;
+    }
+
+  f= fopen (filename, "r");
+  if (f == NULL)
+    return;
+
+  while (left)
     {
       lineptr = NULL;
       len = 0;
@@ -235,20 +248,32 @@ get_email_subject (const char *filename)
       if (getline (&lineptr, &len, f) < 0)
 	goto exit;
 
-      if (len > 10 && memcmp (lineptr, "Subject: ", 9) == 0)
+      if (subject && len > 10 && memcmp (lineptr, "Subject: ", 9) == 0)
 	{
-	  ret = strdup (lineptr + 9);
-	  *strchr (ret, '\n') = '\0';
-	  goto exit;
+          char *tmp = NULL;
+	  tmp = strdup (lineptr + 9);
+	  *strchr (tmp, '\n') = '\0';
+          *subject = tmp;
+	  left--;
+	}
+
+      if (from && len > 7 && memcmp (lineptr, "From: ", 6) == 0)
+	{
+          char *tmp = NULL;
+	  tmp = strdup (lineptr + 6);
+	  *strchr (tmp, '\n') = '\0';
+          *from = tmp;
+	  left--;
 	}
 
       free (lineptr);
+      lineptr = NULL;
     }
 
 exit:
-  free (lineptr);
+  if (lineptr)
+    free (lineptr);
   fclose (f);
-  return ret;
 }
 
 static void
@@ -310,7 +335,7 @@ handle_events (int argc, char *argv[])
 
 	  if (event->mask & IN_MOVED_TO)
 	    {
-	      char *subject, *path;
+	      char *path;
 
 	      asprintf (&path, "%s/%s/%s", it->name, subdir, event->name);
 	      if (path == NULL)
@@ -321,7 +346,8 @@ handle_events (int argc, char *argv[])
 		{
 		  if (print_subject)
 		    {
-		      subject = get_email_subject (path);
+                      char *subject = NULL;
+                      get_email_from_subject (path, NULL, &subject);
 		      printf ("New message: %s : %s\n", path, subject);
 		      free (subject);
 		    }
