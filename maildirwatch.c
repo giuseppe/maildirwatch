@@ -255,23 +255,31 @@ cleanup:
   return ret;
 }
 
+enum
+  {
+    IN_HEADER,
+    IN_SUBJECT,
+    IN_FROM,
+  };
+
 static void
 get_email_from_subject (const char *filename, char **from , char **subject)
 {
   char *lineptr;
   size_t len;
   FILE *f;
+  int state = IN_HEADER;
   int left = 0;
 
   if (from)
     {
-      left++;
       *from = NULL;
+      left++;
     }
   if (subject)
     {
-      left++;
       *subject = NULL;
+      left++;
     }
 
   f= fopen (filename, "r");
@@ -280,32 +288,59 @@ get_email_from_subject (const char *filename, char **from , char **subject)
 
   while (left)
     {
+      char *tmp;
       lineptr = NULL;
       len = 0;
-
       if (getline (&lineptr, &len, f) < 0)
 	goto exit;
 
-      if (subject && len > 10 && memcmp (lineptr, "Subject: ", 9) == 0)
-	{
-          char *tmp = NULL;
-	  tmp = strdup (lineptr + 9);
-	  *strchr (tmp, '\n') = '\0';
+      switch (state)
+        {
+        case IN_SUBJECT:
+          if (lineptr[0] != ' ')
+            {
+              state = IN_HEADER;
+              left--;
+              goto HANDLE_IN_HEADER;
+            }
+          *strchr (lineptr, '\n') = '\0';
+          asprintf (&tmp, "%s%s", *subject, lineptr);
+          free (*subject);
           *subject = tmp;
-	  left--;
-	}
+          break;
 
-      if (from && len > 7 && memcmp (lineptr, "From: ", 6) == 0)
-	{
-          char *tmp = NULL;
-	  tmp = strdup (lineptr + 6);
-	  *strchr (tmp, '\n') = '\0';
+        case IN_FROM:
+          if (lineptr[0] != ' ')
+            {
+              state = IN_HEADER;
+              left--;
+              goto HANDLE_IN_HEADER;
+            }
+          *strchr (lineptr, '\n') = '\0';
+          asprintf (&tmp, "%s%s", *from, lineptr);
+          free (*from);
           *from = tmp;
-	  left--;
-	}
+          break;
 
-      free (lineptr);
-      lineptr = NULL;
+        case IN_HEADER:
+HANDLE_IN_HEADER:
+          if (subject && len > 10 && memcmp (lineptr, "Subject: ", 9) == 0)
+            {
+              tmp = strdup (lineptr + 9);
+              *strchr (tmp, '\n') = '\0';
+              *subject = tmp;
+              state = IN_SUBJECT;
+            }
+
+          if (from && len > 7 && memcmp (lineptr, "From: ", 6) == 0)
+            {
+              tmp = strdup (lineptr + 6);
+              *strchr (tmp, '\n') = '\0';
+              *from = tmp;
+              state = IN_FROM;
+            }
+          break;
+        }
     }
 
 exit:
