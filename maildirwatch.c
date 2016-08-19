@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with Wget.  If not, see <http://www.gnu.org/licenses/>.
 
 */
+#define _GNU_SOURCE
 
 #include <errno.h>
 #include <poll.h>
@@ -24,6 +25,7 @@ along with Wget.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
+#include <error.h>
 
 #include <dirent.h>
 #include <sys/types.h>
