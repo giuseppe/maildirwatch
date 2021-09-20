@@ -160,7 +160,10 @@ static int
 add_dir (const char *pretty_name, const char *name)
 {
   char *dir;
-  struct Maildir *m = malloc (sizeof *m);
+  int ret;
+  struct Maildir *m;
+
+  m = malloc (sizeof *m);
   if (m == NULL)
     return -1;
 
@@ -177,10 +180,15 @@ add_dir (const char *pretty_name, const char *name)
   asprintf (&dir, "%s/cur", name);
   if (dir == NULL)
     goto fail;
+
   m->fd_cur = inotify_add_watch (inotify_fd, dir, IN_MOVED_TO);
   free (dir);
   if (m->fd_cur < 0)
+    {
+      if (access (dir, F_OK) < 0)
+        goto ignore;
     goto fail;
+    }
 
   asprintf (&dir, "%s/new", name);
   if (dir == NULL)
@@ -194,7 +202,14 @@ add_dir (const char *pretty_name, const char *name)
   maildirs = m;
   return 0;
 
+ignore:
+  ret = 0;
+  goto cleanup;
+
 fail:
+  ret = -1;
+
+cleanup:
   free (m->pretty_name);
   free (m->name);
   if (m->fd_cur)
@@ -202,7 +217,7 @@ fail:
   if (m->fd_new)
     inotify_rm_watch (inotify_fd, m->fd_new);
   free (m);
-  return -1;
+  return ret;
 }
 
 static int
