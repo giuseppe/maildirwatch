@@ -33,7 +33,7 @@
 
 (defun maildirwatch-watch (maildirs)
   (interactive)
-  (let* ((mdirs-path (mapcar 'expand-file-name maildirwatch-mdirs))
+  (let* ((mdirs-path (mapcar 'expand-file-name maildirs))
         (proc (apply 'start-process "maildirwatch" nil
                      maildirwatch-path mdirs-path)))
     (set-process-filter proc 'maildirwatch-filter)
